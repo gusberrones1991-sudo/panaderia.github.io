@@ -1,0 +1,2147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Pedidos - Panadería</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #8B4513;
+            --secondary: #D2691E;
+            --success: #228B22;
+            --danger: #DC143C;
+            --warning: #FFA500;
+            --light: #F5F5DC;
+            --dark: #8B4513;
+            --border-radius: 10px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #FFF8DC;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .app-container {
+            max-width: 100%;
+            margin: 0 auto;
+            background-color: white;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: var(--box-shadow);
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background-color: white;
+            border-bottom: 1px solid #e0e0e0;
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            flex: 1;
+            min-width: 80px;
+            text-align: center;
+            padding: 12px 5px;
+            font-weight: 500;
+            color: var(--dark);
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .nav-tab.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .screen {
+            display: none;
+            padding: 15px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary);
+        }
+
+        .btn-success {
+            background-color: var(--success);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+        }
+
+        .btn-warning {
+            background-color: var(--warning);
+        }
+
+        .btn-info {
+            background-color: #17a2b8;
+        }
+
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 0.7rem;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .product-card {
+            border: 2px solid #e0e0e0;
+            border-radius: var(--border-radius);
+            padding: 10px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .product-card.active {
+            border-color: var(--primary);
+            background-color: rgba(139, 69, 19, 0.1);
+        }
+
+        .product-icon {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .product-price {
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 5px;
+            font-size: 0.8rem;
+        }
+
+        .quantity-input {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .order-card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 12px;
+            margin-bottom: 12px;
+            border-left: 5px solid var(--primary);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .order-card.pending {
+            border-left-color: var(--warning);
+        }
+
+        .order-card.paid {
+            border-left-color: var(--success);
+        }
+
+        .order-card.pending-payment {
+            border-left-color: var(--danger);
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .order-client {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--dark);
+            flex: 1;
+        }
+
+        .order-amount {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--primary);
+            text-align: right;
+        }
+
+        .order-details {
+            margin-bottom: 8px;
+            color: var(--dark);
+            font-size: 0.9rem;
+        }
+
+        .product-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+        }
+
+        .order-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .status-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+        }
+
+        .btn-paid {
+            background-color: rgba(34, 139, 34, 0.2);
+            color: var(--success);
+        }
+
+        .btn-paid.active {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .btn-pending-payment {
+            background-color: rgba(220, 20, 60, 0.2);
+            color: var(--danger);
+        }
+
+        .btn-pending-payment.active {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .btn-pending-delivery {
+            background-color: rgba(255, 165, 0, 0.2);
+            color: var(--warning);
+        }
+
+        .btn-pending-delivery.active {
+            background-color: var(--warning);
+            color: white;
+        }
+
+        .action-buttons {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .action-btn {
+            background: rgba(0, 0, 0, 0.1);
+            color: var(--dark);
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .edit-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .client-list {
+            list-style-type: none;
+            margin-top: 12px;
+        }
+
+        .client-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .client-item:last-child {
+            border-bottom: none;
+        }
+
+        .client-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .client-amount {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 15px;
+            color: #8B4513;
+        }
+
+        .empty-state-icon {
+            font-size: 36px;
+            margin-bottom: 10px;
+            color: #D2B48C;
+        }
+
+        .summary-totals {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .total-card {
+            flex: 1;
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 12px;
+            text-align: center;
+            box-shadow: var(--box-shadow);
+        }
+
+        .total-card h3 {
+            font-size: 0.8rem;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .total-card .amount {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .order-number {
+            background-color: var(--primary);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            margin-right: 6px;
+        }
+
+        .delivery-order-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .delivery-item {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 12px;
+            margin-bottom: 8px;
+            box-shadow: var(--box-shadow);
+            cursor: grab;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .delivery-item:active {
+            cursor: grabbing;
+        }
+
+        .delivery-item.dragging {
+            opacity: 0.5;
+            border-color: var(--primary);
+        }
+
+        .delivery-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .delivery-products {
+            margin-top: 6px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .drag-handle {
+            font-size: 1rem;
+            margin-right: 8px;
+            cursor: grab;
+            color: var(--primary);
+        }
+
+        .status-badge {
+            padding: 3px 6px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            margin-left: 6px;
+        }
+
+        .badge-paid {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .badge-pending {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .date-filter {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .date-input {
+            flex: 1;
+            min-width: 120px;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 0.8rem;
+        }
+
+        .client-summary {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 12px;
+            margin-bottom: 8px;
+            box-shadow: var(--box-shadow);
+        }
+
+        .client-total {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-top: 5px;
+        }
+
+        .pending-payment-section {
+            margin-top: 15px;
+        }
+
+        .payment-controls {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .client-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .daily-total {
+            background: var(--light);
+            padding: 10px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--primary);
+        }
+
+        .daily-production {
+            background: var(--light);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 15px;
+        }
+
+        .daily-production h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .production-grid {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .production-item {
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .production-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .production-label {
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .production-count {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+
+        .clear-production-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            margin: 0 auto;
+            width: auto;
+        }
+
+        .clear-production-btn:hover {
+            background-color: #c82333;
+        }
+
+        .details-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: var(--border-radius);
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .details-btn:hover {
+            background-color: #5a6268;
+        }
+
+        .client-details {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: var(--border-radius);
+            font-size: 0.8rem;
+        }
+
+        .client-detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .payment-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .payment-modal.active {
+            display: flex;
+        }
+
+        .payment-content {
+            background: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .payment-input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .export-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: var(--border-radius);
+            color: white;
+            font-weight: 500;
+            z-index: 1100;
+            box-shadow: var(--box-shadow);
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background-color: var(--success);
+        }
+
+        .notification.error {
+            background-color: var(--danger);
+        }
+
+        .notification.info {
+            background-color: var(--primary);
+        }
+
+        .danger-zone {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: var(--border-radius);
+        }
+
+        .danger-zone h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .client-status {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
+        .status-pending {
+            background-color: var(--warning);
+            color: white;
+        }
+
+        .status-delivered {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .status-pending-payment {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.2rem;
+            }
+            
+            .nav-tab {
+                font-size: 0.7rem;
+                padding: 10px 3px;
+                min-width: 70px;
+            }
+            
+            .screen {
+                padding: 10px;
+            }
+            
+            .order-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .order-amount {
+                margin-top: 5px;
+            }
+            
+            .summary-totals {
+                flex-direction: column;
+            }
+            
+            .product-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            
+            .date-filter {
+                flex-direction: column;
+            }
+            
+            .order-controls {
+                flex-direction: column;
+            }
+
+            .header-controls {
+                position: static;
+                justify-content: center;
+                margin-top: 10px;
+            }
+
+            .export-buttons {
+                flex-direction: column;
+            }
+
+            .production-grid {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .production-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px;
+            }
+
+            .production-info {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>🍞 Panadería - Sistema de Pedidos</h1>
+            <div class="header-controls">
+                <button class="btn btn-info btn-small" id="exportDataBtn">📊 Exportar</button>
+                <button class="btn btn-warning btn-small" id="backupDataBtn">💾 Respaldar</button>
+            </div>
+        </div>
+        
+        <div class="nav-tabs">
+            <div class="nav-tab active" data-screen="screen1">Nuevo</div>
+            <div class="nav-tab" data-screen="screen2">Pendientes</div>
+            <div class="nav-tab" data-screen="screen7">Producción</div>
+            <div class="nav-tab" data-screen="screen3">Por Cobrar</div>
+            <div class="nav-tab" data-screen="screen4">Entregados</div>
+            <div class="nav-tab" data-screen="screen5">Orden Entrega</div>
+            <div class="nav-tab" data-screen="screen6">Historial</div>
+        </div>
+        
+        <!-- Pantalla 1: Nuevo Pedido -->
+        <div id="screen1" class="screen active">
+            <div class="card">
+                <h2>Nuevo Pedido</h2>
+                
+                <div class="form-group">
+                    <label for="clientSelect">Cliente:</label>
+                    <select id="clientSelect" class="form-control">
+                        <option value="">-- Seleccionar --</option>
+                    </select>
+                    <small style="color: #666; font-size: 0.8rem; margin-top: 5px; display: block;">
+                        Solo se muestran clientes sin pedidos pendientes
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Productos:</label>
+                    <div class="product-grid">
+                        <div class="product-card active" data-product="pan">
+                            <div class="product-icon">🍞</div>
+                            <div><strong>Pan</strong></div>
+                            <div class="product-price">$0.13</div>
+                            <input type="number" class="quantity-input" id="panQuantity" value="0" min="0">
+                        </div>
+                        
+                        <div class="product-card" data-product="empanada">
+                            <div class="product-icon">🥟</div>
+                            <div><strong>Emp. $0.25</strong></div>
+                            <div class="product-price">$0.25</div>
+                            <input type="number" class="quantity-input" id="empanadaQuantity" value="0" min="0">
+                        </div>
+
+                        <div class="product-card" data-product="empanada15">
+                            <div class="product-icon">🥟</div>
+                            <div><strong>Emp. $0.15</strong></div>
+                            <div class="product-price">$0.15</div>
+                            <input type="number" class="quantity-input" id="empanada15Quantity" value="0" min="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Total:</label>
+                    <div id="totalAmount" style="font-size: 1.3rem; font-weight: bold; color: var(--primary); text-align: center; padding: 8px; background-color: var(--light); border-radius: var(--border-radius);">
+                        $0.00
+                    </div>
+                </div>
+                
+                <button class="btn btn-success" id="addOrderBtn">Agregar Pedido</button>
+            </div>
+        </div>
+        
+        <!-- Pantalla 2: Pendientes de Entrega -->
+        <div id="screen2" class="screen">
+            <div class="card">
+                <h2>Pedidos Pendientes</h2>
+                <p>Por entregar hoy</p>
+            </div>
+            
+            <div id="pendingOrdersList">
+                <!-- Pedidos pendientes se cargarán aquí -->
+            </div>
+            
+            <div id="emptyPending" class="empty-state">
+                <div class="empty-state-icon">📦</div>
+                <h3>No hay pedidos pendientes</h3>
+                <p>Todos los pedidos han sido entregados</p>
+            </div>
+        </div>
+
+        <!-- Pantalla 7: Producción del Día -->
+        <div id="screen7" class="screen">
+            <div class="card">
+                <h2>Producción del Día</h2>
+                <p>Resumen de productos elaborados hoy</p>
+                
+                <div class="daily-production">
+                    <h3>📊 Producción del Día</h3>
+                    <div class="production-grid">
+                        <div class="production-item">
+                            <div class="production-icon">🍞</div>
+                            <div class="production-label">Pan</div>
+                            <div class="production-count" id="dailyPanTotal">0</div>
+                        </div>
+                        <div class="production-item">
+                            <div class="production-icon">🥟</div>
+                            <div class="production-label">Emp. $0.25</div>
+                            <div class="production-count" id="dailyEmpanadaTotal">0</div>
+                        </div>
+                        <div class="production-item">
+                            <div class="production-icon">🥟</div>
+                            <div class="production-label">Emp. $0.15</div>
+                            <div class="production-count" id="dailyEmpanada15Total">0</div>
+                        </div>
+                    </div>
+                    <button class="clear-production-btn" id="clearProductionBtn">
+                        🗑️ Eliminar Producción del Día
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pantalla 3: Por Cobrar -->
+        <div id="screen3" class="screen">
+            <div class="card">
+                <h2>Pedidos por Cobrar</h2>
+                <p>Entregados pero pendientes de pago</p>
+                <div class="daily-total" id="dailyPendingTotal">
+                    Total por Cobrar Hoy: $0.00
+                </div>
+            </div>
+            
+            <div id="pendingPaymentList">
+                <!-- Pedidos por cobrar se cargarán aquí -->
+            </div>
+            
+            <div id="emptyPendingPayment" class="empty-state">
+                <div class="empty-state-icon">💵</div>
+                <h3>No hay pedidos por cobrar</h3>
+                <p>Todos los pedidos están pagados</p>
+            </div>
+        </div>
+
+        <!-- Pantalla 4: Entregados -->
+        <div id="screen4" class="screen">
+            <div class="card">
+                <h2>Pedidos Entregados</h2>
+                <p>Entregados y pagados hoy</p>
+                <div class="daily-total" id="dailyDeliveredTotal">
+                    Total Cobrado Hoy: $0.00
+                </div>
+            </div>
+            
+            <div id="deliveredList">
+                <!-- Pedidos entregados se cargarán aquí -->
+            </div>
+            
+            <div id="emptyDelivered" class="empty-state">
+                <div class="empty-state-icon">✅</div>
+                <h3>No hay pedidos entregados</h3>
+                <p>Los pedidos entregados aparecerán aquí</p>
+            </div>
+        </div>
+        
+        <!-- Pantalla 5: Orden de Entrega -->
+        <div id="screen5" class="screen">
+            <div class="card">
+                <h2>Orden de Entrega</h2>
+                <p>Gestiona clientes y orden de entrega</p>
+                
+                <div class="delivery-order-controls">
+                    <button class="btn btn-success" id="saveOrderBtn">💾 Guardar</button>
+                    <button class="btn" id="addNewClientBtn">➕ Agregar</button>
+                </div>
+            </div>
+            
+            <div id="deliveryList">
+                <!-- Lista de entrega se cargará aquí -->
+            </div>
+            
+            <div id="emptyDelivery" class="empty-state">
+                <div class="empty-state-icon">🚚</div>
+                <h3>No hay clientes</h3>
+                <p>Agrega clientes para comenzar</p>
+            </div>
+        </div>
+
+        <!-- Pantalla 6: Historial -->
+        <div id="screen6" class="screen">
+            <div class="card">
+                <h2>Historial</h2>
+                <p>Consulta por fechas</p>
+                
+                <div class="date-filter">
+                    <label for="startDate">Desde:</label>
+                    <input type="date" id="startDate" class="date-input">
+                    <label for="endDate">Hasta:</label>
+                    <input type="date" id="endDate" class="date-input">
+                    <button class="btn" id="filterBtn">Filtrar</button>
+                    <button class="btn btn-warning" id="resetFilterBtn">Hoy</button>
+                </div>
+
+                <div class="export-section">
+                    <h3>Exportar Datos</h3>
+                    <div class="export-buttons">
+                        <button class="btn btn-info" id="exportHistoryExcel">📊 Excel Completo</button>
+                        <button class="btn btn-success" id="exportSummaryExcel">📈 Resumen</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="summary-totals">
+                <div class="total-card">
+                    <h3>Pagado</h3>
+                    <div class="amount" id="totalPaid">$0.00</div>
+                </div>
+                <div class="total-card">
+                    <h3>Por Cobrar</h3>
+                    <div class="amount" id="totalPending">$0.00</div>
+                </div>
+                <div class="total-card">
+                    <h3>Total</h3>
+                    <div class="amount" id="totalGeneral">$0.00</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Resumen por Cliente</h3>
+                <div id="clientsSummary">
+                    <!-- Resumen por cliente se cargará aquí -->
+                </div>
+                <div id="emptySummary" class="empty-state" style="display: none; padding: 15px;">
+                    <div class="empty-state-icon">📊</div>
+                    <p>No hay datos</p>
+                </div>
+            </div>
+
+            <div class="danger-zone">
+                <h3>⚠️ Zona de Peligro</h3>
+                <p>Esta acción eliminará todos los datos del sistema y no se puede deshacer.</p>
+                <div class="modal-buttons">
+                    <button class="btn btn-danger" id="deleteAllDataBtn">🗑️ Eliminar Todos los Datos</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para Agregar Cliente -->
+        <div class="modal" id="addClientModal">
+            <div class="modal-content">
+                <h3>Agregar Nuevo Cliente</h3>
+                <input type="text" id="newClientName" class="form-control" placeholder="Nombre del cliente">
+                <div class="modal-buttons">
+                    <button class="btn btn-success" id="confirmAddClientBtn">Agregar</button>
+                    <button class="btn btn-danger" id="cancelAddClientBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para Eliminar Todos los Datos -->
+        <div class="modal" id="deleteAllDataModal">
+            <div class="modal-content">
+                <h3>⚠️ Eliminar Todos los Datos</h3>
+                <p>¿Estás seguro de que quieres eliminar todos los datos del sistema?</p>
+                <p><strong>Esta acción no se puede deshacer.</strong> Se eliminarán:</p>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>Todos los pedidos</li>
+                    <li>Lista de clientes</li>
+                    <li>Producción del día</li>
+                    <li>Historial completo</li>
+                </ul>
+                <p>Escribe <strong>"ELIMINAR"</strong> para confirmar:</p>
+                <input type="text" id="confirmDeleteInput" class="form-control" placeholder="Escribe ELIMINAR aquí">
+                <div class="modal-buttons">
+                    <button class="btn btn-danger" id="confirmDeleteBtn" disabled>🗑️ Eliminar Todo</button>
+                    <button class="btn btn-success" id="cancelDeleteBtn">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notificaciones -->
+        <div class="notification" id="notification"></div>
+    </div>
+
+    <script>
+        // Precios fijos
+        const PRICES = {
+            pan: 0.13,
+            empanada: 0.25,
+            empanada15: 0.15
+        };
+
+        // Base de datos local
+        let clients = JSON.parse(localStorage.getItem('panaderiaClients')) || ['María González', 'Carlos López', 'Ana Martínez', 'Juan Pérez'];
+        let orders = JSON.parse(localStorage.getItem('panaderiaOrders')) || [];
+        let deliveryOrder = JSON.parse(localStorage.getItem('panaderiaDeliveryOrder')) || [];
+        let dailyProduction = JSON.parse(localStorage.getItem('panaderiaDailyProduction')) || {
+            pan: 0,
+            empanada: 0,
+            empanada15: 0
+        };
+
+        // Elementos del DOM
+        const navTabs = document.querySelectorAll('.nav-tab');
+        const screens = document.querySelectorAll('.screen');
+        const clientSelect = document.getElementById('clientSelect');
+        const panQuantityInput = document.getElementById('panQuantity');
+        const empanadaQuantityInput = document.getElementById('empanadaQuantity');
+        const empanada15QuantityInput = document.getElementById('empanada15Quantity');
+        const totalAmountDisplay = document.getElementById('totalAmount');
+        const addOrderBtn = document.getElementById('addOrderBtn');
+        const clearProductionBtn = document.getElementById('clearProductionBtn');
+        const dailyPanTotal = document.getElementById('dailyPanTotal');
+        const dailyEmpanadaTotal = document.getElementById('dailyEmpanadaTotal');
+        const dailyEmpanada15Total = document.getElementById('dailyEmpanada15Total');
+        const pendingOrdersList = document.getElementById('pendingOrdersList');
+        const emptyPending = document.getElementById('emptyPending');
+        const pendingPaymentList = document.getElementById('pendingPaymentList');
+        const emptyPendingPayment = document.getElementById('emptyPendingPayment');
+        const deliveredList = document.getElementById('deliveredList');
+        const emptyDelivered = document.getElementById('emptyDelivered');
+        const deliveryList = document.getElementById('deliveryList');
+        const emptyDelivery = document.getElementById('emptyDelivery');
+        const saveOrderBtn = document.getElementById('saveOrderBtn');
+        const addNewClientBtn = document.getElementById('addNewClientBtn');
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        const filterBtn = document.getElementById('filterBtn');
+        const resetFilterBtn = document.getElementById('resetFilterBtn');
+        const totalPaid = document.getElementById('totalPaid');
+        const totalPending = document.getElementById('totalPending');
+        const totalGeneral = document.getElementById('totalGeneral');
+        const clientsSummary = document.getElementById('clientsSummary');
+        const emptySummary = document.getElementById('emptySummary');
+        const dailyPendingTotal = document.getElementById('dailyPendingTotal');
+        const dailyDeliveredTotal = document.getElementById('dailyDeliveredTotal');
+        const addClientModal = document.getElementById('addClientModal');
+        const newClientName = document.getElementById('newClientName');
+        const confirmAddClientBtn = document.getElementById('confirmAddClientBtn');
+        const cancelAddClientBtn = document.getElementById('cancelAddClientBtn');
+        const exportDataBtn = document.getElementById('exportDataBtn');
+        const backupDataBtn = document.getElementById('backupDataBtn');
+        const notification = document.getElementById('notification');
+        const deleteAllDataBtn = document.getElementById('deleteAllDataBtn');
+        const deleteAllDataModal = document.getElementById('deleteAllDataModal');
+        const confirmDeleteInput = document.getElementById('confirmDeleteInput');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+        const exportHistoryExcel = document.getElementById('exportHistoryExcel');
+        const exportSummaryExcel = document.getElementById('exportSummaryExcel');
+
+        // Variables para suma de productos
+        let productTotals = {
+            pan: 0,
+            empanada: 0,
+            empanada15: 0
+        };
+
+        // Inicializar fechas
+        const today = new Date().toISOString().split('T')[0];
+        startDateInput.value = today;
+        endDateInput.value = today;
+
+        // Inicializar la aplicación
+        function initApp() {
+            checkNewDay();
+            updateClientsList();
+            updateDailyProduction();
+            updateTotalAmount();
+            renderPendingOrders();
+            renderPendingPaymentOrders();
+            renderDeliveredOrders();
+            renderDeliveryList();
+            updateHistory();
+            setupEventListeners();
+        }
+
+        // Configurar event listeners
+        function setupEventListeners() {
+            // Navegación entre pestañas
+            navTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const screenId = tab.getAttribute('data-screen');
+                    
+                    // Actualizar pestañas activas
+                    navTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Mostrar pantalla correspondiente
+                    screens.forEach(screen => screen.classList.remove('active'));
+                    document.getElementById(screenId).classList.add('active');
+                    
+                    // Actualizar listas si es necesario
+                    if (screenId === 'screen1') {
+                        updateClientsList();
+                    } else if (screenId === 'screen2') {
+                        renderPendingOrders();
+                    } else if (screenId === 'screen3') {
+                        renderPendingPaymentOrders();
+                    } else if (screenId === 'screen4') {
+                        renderDeliveredOrders();
+                    } else if (screenId === 'screen5') {
+                        renderDeliveryList();
+                    } else if (screenId === 'screen6') {
+                        updateHistory();
+                    } else if (screenId === 'screen7') {
+                        updateDailyProduction();
+                    }
+                });
+            });
+
+            // Calcular total cuando cambian las cantidades
+            [panQuantityInput, empanadaQuantityInput, empanada15QuantityInput].forEach(input => {
+                input.addEventListener('input', updateTotalAmount);
+            });
+
+            // Botones principales
+            addOrderBtn.addEventListener('click', addNewOrder);
+            clearProductionBtn.addEventListener('click', clearDailyProduction);
+            saveOrderBtn.addEventListener('click', saveDeliveryOrder);
+            addNewClientBtn.addEventListener('click', () => {
+                newClientName.value = '';
+                addClientModal.classList.add('active');
+            });
+            filterBtn.addEventListener('click', updateHistory);
+            resetFilterBtn.addEventListener('click', resetFilters);
+
+            // Modal de agregar cliente
+            confirmAddClientBtn.addEventListener('click', confirmAddClient);
+            cancelAddClientBtn.addEventListener('click', () => {
+                addClientModal.classList.remove('active');
+            });
+
+            // Botones de exportación y respaldo
+            exportDataBtn.addEventListener('click', exportAllData);
+            backupDataBtn.addEventListener('click', backupData);
+            exportHistoryExcel.addEventListener('click', () => exportHistoryData());
+            exportSummaryExcel.addEventListener('click', () => exportSummaryData());
+
+            // Eliminar todos los datos
+            deleteAllDataBtn.addEventListener('click', () => {
+                confirmDeleteInput.value = '';
+                confirmDeleteBtn.disabled = true;
+                deleteAllDataModal.classList.add('active');
+            });
+
+            confirmDeleteInput.addEventListener('input', () => {
+                confirmDeleteBtn.disabled = confirmDeleteInput.value !== 'ELIMINAR';
+            });
+
+            confirmDeleteBtn.addEventListener('click', deleteAllData);
+            cancelDeleteBtn.addEventListener('click', () => {
+                deleteAllDataModal.classList.remove('active');
+            });
+        }
+
+        // Verificar si es un nuevo día para resetear producción
+        function checkNewDay() {
+            const lastDate = localStorage.getItem('panaderiaLastDate');
+            if (lastDate !== today) {
+                dailyProduction = { pan: 0, empanada: 0, empanada15: 0 };
+                saveDailyProduction();
+                localStorage.setItem('panaderiaLastDate', today);
+            }
+        }
+
+        // Actualizar lista de clientes disponibles
+        function updateClientsList() {
+            const today = new Date().toLocaleDateString('es-ES');
+            
+            // Obtener clientes con pedidos pendientes hoy
+            const clientsWithPendingOrders = orders
+                .filter(order => 
+                    (order.status === 'Pendiente' || order.status === 'Pendiente de Pago') && 
+                    order.date === today
+                )
+                .map(order => order.clientName);
+            
+            // Filtrar clientes disponibles (sin pedidos pendientes)
+            const availableClients = deliveryOrder.filter(client => 
+                !clientsWithPendingOrders.includes(client)
+            );
+            
+            clientSelect.innerHTML = '<option value="">-- Seleccionar --</option>';
+            
+            if (availableClients.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No hay clientes disponibles';
+                option.disabled = true;
+                clientSelect.appendChild(option);
+                return;
+            }
+            
+            availableClients.forEach(client => {
+                const option = document.createElement('option');
+                option.value = client;
+                option.textContent = client;
+                clientSelect.appendChild(option);
+            });
+        }
+
+        // Calcular total y actualizar suma
+        function updateTotalAmount() {
+            const panQty = parseInt(panQuantityInput.value) || 0;
+            const empanadaQty = parseInt(empanadaQuantityInput.value) || 0;
+            const empanada15Qty = parseInt(empanada15QuantityInput.value) || 0;
+            
+            const total = (panQty * PRICES.pan) + 
+                         (empanadaQty * PRICES.empanada) + 
+                         (empanada15Qty * PRICES.empanada15);
+            
+            totalAmountDisplay.textContent = `$${total.toFixed(2)}`;
+            
+            // Actualizar suma de productos
+            productTotals.pan = panQty;
+            productTotals.empanada = empanadaQty;
+            productTotals.empanada15 = empanada15Qty;
+        }
+
+        // Actualizar producción del día
+        function updateDailyProduction() {
+            dailyPanTotal.textContent = dailyProduction.pan;
+            dailyEmpanadaTotal.textContent = dailyProduction.empanada;
+            dailyEmpanada15Total.textContent = dailyProduction.empanada15;
+        }
+
+        // Limpiar producción del día
+        function clearDailyProduction() {
+            if (confirm('¿Estás seguro de que quieres eliminar la producción del día? Esta acción no se puede deshacer.')) {
+                dailyProduction = { pan: 0, empanada: 0, empanada15: 0 };
+                saveDailyProduction();
+                updateDailyProduction();
+                showNotification('Producción del día eliminada', 'success');
+            }
+        }
+
+        // Agregar nuevo pedido
+        function addNewOrder() {
+            const selectedClient = clientSelect.value;
+            
+            if (!selectedClient) {
+                showNotification('Por favor selecciona un cliente', 'error');
+                return;
+            }
+            
+            const panQty = parseInt(panQuantityInput.value) || 0;
+            const empanadaQty = parseInt(empanadaQuantityInput.value) || 0;
+            const empanada15Qty = parseInt(empanada15QuantityInput.value) || 0;
+            
+            if (panQty === 0 && empanadaQty === 0 && empanada15Qty === 0) {
+                showNotification('Por favor ingresa al menos una cantidad', 'error');
+                return;
+            }
+            
+            const total = (panQty * PRICES.pan) + 
+                         (empanadaQty * PRICES.empanada) + 
+                         (empanada15Qty * PRICES.empanada15);
+            
+            const newOrder = {
+                id: Date.now(),
+                clientName: selectedClient,
+                products: {
+                    pan: panQty,
+                    empanada: empanadaQty,
+                    empanada15: empanada15Qty
+                },
+                total: total,
+                status: 'Pendiente',
+                date: new Date().toLocaleDateString('es-ES'),
+                timestamp: Date.now(),
+                paidAmount: 0
+            };
+            
+            orders.push(newOrder);
+            saveOrders();
+            
+            // Actualizar producción del día
+            dailyProduction.pan += panQty;
+            dailyProduction.empanada += empanadaQty;
+            dailyProduction.empanada15 += empanada15Qty;
+            saveDailyProduction();
+            updateDailyProduction();
+            
+            // Actualizar lista de clientes disponibles
+            updateClientsList();
+            
+            // Limpiar formulario pero mantener en la misma pantalla
+            panQuantityInput.value = '0';
+            empanadaQuantityInput.value = '0';
+            empanada15QuantityInput.value = '0';
+            productTotals = { pan: 0, empanada: 0, empanada15: 0 };
+            updateTotalAmount();
+            
+            showNotification('Pedido agregado correctamente', 'success');
+        }
+
+        // Eliminar todos los datos
+        function deleteAllData() {
+            orders = [];
+            deliveryOrder = ['María González', 'Carlos López', 'Ana Martínez', 'Juan Pérez'];
+            dailyProduction = { pan: 0, empanada: 0, empanada15: 0 };
+            
+            saveOrders();
+            saveDeliveryOrder();
+            saveDailyProduction();
+            
+            // Actualizar todas las pantallas
+            updateClientsList();
+            updateDailyProduction();
+            updateTotalAmount();
+            renderPendingOrders();
+            renderPendingPaymentOrders();
+            renderDeliveredOrders();
+            renderDeliveryList();
+            updateHistory();
+            
+            deleteAllDataModal.classList.remove('active');
+            showNotification('Todos los datos han sido eliminados', 'success');
+        }
+
+        // Renderizar pedidos pendientes
+        function renderPendingOrders() {
+            const today = new Date().toLocaleDateString('es-ES');
+            const pendingOrders = orders.filter(order => 
+                order.status === 'Pendiente' && order.date === today
+            );
+            
+            if (pendingOrders.length === 0) {
+                pendingOrdersList.style.display = 'none';
+                emptyPending.style.display = 'block';
+                return;
+            }
+            
+            pendingOrdersList.style.display = 'block';
+            emptyPending.style.display = 'none';
+            
+            pendingOrdersList.innerHTML = '';
+            pendingOrders.forEach(order => {
+                const orderCard = createOrderCard(order);
+                pendingOrdersList.appendChild(orderCard);
+            });
+        }
+
+        // Crear tarjeta de pedido
+        function createOrderCard(order) {
+            const card = document.createElement('div');
+            card.className = `order-card ${order.status === 'Pendiente' ? 'pending' : 
+                              order.status === 'Pagado' ? 'paid' : 'pending-payment'}`;
+            
+            const productsText = [];
+            if (order.products.pan > 0) productsText.push(`🍞 Pan: ${order.products.pan}`);
+            if (order.products.empanada > 0) productsText.push(`🥟 Emp. $0.25: ${order.products.empanada}`);
+            if (order.products.empanada15 > 0) productsText.push(`🥟 Emp. $0.15: ${order.products.empanada15}`);
+            
+            card.innerHTML = `
+                <div class="order-header">
+                    <div class="order-client">${order.clientName}</div>
+                    <div class="order-amount">$${order.total.toFixed(2)}</div>
+                </div>
+                <div class="order-details">
+                    ${productsText.join(' | ')}
+                </div>
+                <div class="order-controls">
+                    <button class="status-btn btn-pending-delivery ${order.status === 'Pendiente' ? 'active' : ''}" 
+                            data-order-id="${order.id}" data-status="Pendiente">
+                        Pendiente
+                    </button>
+                    <button class="status-btn btn-paid ${order.status === 'Pagado' ? 'active' : ''}" 
+                            data-order-id="${order.id}" data-status="Pagado">
+                        Pagado
+                    </button>
+                    <button class="status-btn btn-pending-payment ${order.status === 'Pendiente de Pago' ? 'active' : ''}" 
+                            data-order-id="${order.id}" data-status="Pendiente de Pago">
+                        Por Cobrar
+                    </button>
+                </div>
+                <div class="action-buttons">
+                    <button class="action-btn edit-btn" data-order-id="${order.id}">✏️</button>
+                    <button class="action-btn delete-btn" data-order-id="${order.id}">🗑️</button>
+                </div>
+            `;
+            
+            // Agregar event listeners a los botones
+            const statusButtons = card.querySelectorAll('.status-btn');
+            statusButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const orderId = parseInt(e.target.getAttribute('data-order-id'));
+                    const newStatus = e.target.getAttribute('data-status');
+                    updateOrderStatus(orderId, newStatus);
+                });
+            });
+            
+            const editBtn = card.querySelector('.edit-btn');
+            editBtn.addEventListener('click', (e) => {
+                const orderId = parseInt(e.target.getAttribute('data-order-id'));
+                editOrder(orderId);
+            });
+            
+            const deleteBtn = card.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', (e) => {
+                const orderId = parseInt(e.target.getAttribute('data-order-id'));
+                deleteOrder(orderId);
+            });
+            
+            return card;
+        }
+
+        // Actualizar estado del pedido
+        function updateOrderStatus(orderId, newStatus) {
+            const orderIndex = orders.findIndex(order => order.id === orderId);
+            if (orderIndex !== -1) {
+                orders[orderIndex].status = newStatus;
+                
+                if (newStatus === 'Pagado') {
+                    orders[orderIndex].paidAmount = orders[orderIndex].total;
+                }
+                
+                saveOrders();
+                
+                // Actualizar lista de clientes si el pedido se completó
+                if (newStatus === 'Pagado') {
+                    updateClientsList();
+                }
+                
+                renderPendingOrders();
+                renderPendingPaymentOrders();
+                renderDeliveredOrders();
+                updateHistory();
+                showNotification('Estado actualizado correctamente', 'success');
+            }
+        }
+
+        // Editar pedido
+        function editOrder(orderId) {
+            const order = orders.find(order => order.id === orderId);
+            if (order) {
+                // Primero eliminar el pedido actual
+                deleteOrder(orderId, false);
+                
+                // Luego llenar el formulario con los datos del pedido
+                clientSelect.value = order.clientName;
+                panQuantityInput.value = order.products.pan;
+                empanadaQuantityInput.value = order.products.empanada;
+                empanada15QuantityInput.value = order.products.empanada15;
+                updateTotalAmount();
+                
+                showNotification('Pedido cargado para edición', 'info');
+            }
+        }
+
+        // Eliminar pedido
+        function deleteOrder(orderId, showNotification = true) {
+            if (!showNotification || confirm('¿Estás seguro de que quieres eliminar este pedido?')) {
+                const orderIndex = orders.findIndex(order => order.id === orderId);
+                if (orderIndex !== -1) {
+                    const order = orders[orderIndex];
+                    
+                    // Restar de la producción del día
+                    dailyProduction.pan -= order.products.pan;
+                    dailyProduction.empanada -= order.products.empanada;
+                    dailyProduction.empanada15 -= order.products.empanada15;
+                    saveDailyProduction();
+                    updateDailyProduction();
+                    
+                    // Eliminar el pedido
+                    orders.splice(orderIndex, 1);
+                    saveOrders();
+                    
+                    // Actualizar lista de clientes
+                    updateClientsList();
+                    
+                    // Actualizar todas las pantallas
+                    renderPendingOrders();
+                    renderPendingPaymentOrders();
+                    renderDeliveredOrders();
+                    updateHistory();
+                    
+                    if (showNotification) {
+                        showNotification('Pedido eliminado correctamente', 'success');
+                    }
+                }
+            }
+        }
+
+        // Renderizar pedidos por cobrar
+        function renderPendingPaymentOrders() {
+            const today = new Date().toLocaleDateString('es-ES');
+            const pendingPaymentOrders = orders.filter(order => 
+                order.status === 'Pendiente de Pago' && order.date === today
+            );
+            
+            if (pendingPaymentOrders.length === 0) {
+                pendingPaymentList.style.display = 'none';
+                emptyPendingPayment.style.display = 'block';
+                dailyPendingTotal.textContent = 'Total por Cobrar Hoy: $0.00';
+                return;
+            }
+            
+            pendingPaymentList.style.display = 'block';
+            emptyPendingPayment.style.display = 'none';
+            
+            const ordersByClient = {};
+            let totalPendingAmount = 0;
+            
+            pendingPaymentOrders.forEach(order => {
+                if (!ordersByClient[order.clientName]) {
+                    ordersByClient[order.clientName] = {
+                        orders: [],
+                        totalPending: 0,
+                        totalPan: 0,
+                        totalEmpanada: 0,
+                        totalEmpanada15: 0
+                    };
+                }
+                
+                ordersByClient[order.clientName].orders.push(order);
+                ordersByClient[order.clientName].totalPending += order.total - order.paidAmount;
+                ordersByClient[order.clientName].totalPan += order.products.pan;
+                ordersByClient[order.clientName].totalEmpanada += order.products.empanada;
+                ordersByClient[order.clientName].totalEmpanada15 += order.products.empanada15;
+                
+                totalPendingAmount += order.total - order.paidAmount;
+            });
+            
+            pendingPaymentList.innerHTML = '';
+            
+            Object.keys(ordersByClient).forEach(clientName => {
+                const clientData = ordersByClient[clientName];
+                const card = document.createElement('div');
+                card.className = 'order-card pending-payment';
+                
+                card.innerHTML = `
+                    <div class="order-header">
+                        <div class="order-client">${clientName}</div>
+                        <div class="order-amount">$${clientData.totalPending.toFixed(2)}</div>
+                    </div>
+                    <div class="order-details">
+                        🍞 Pan: ${clientData.totalPan} | 🥟 Emp. $0.25: ${clientData.totalEmpanada} | 🥟 Emp. $0.15: ${clientData.totalEmpanada15}
+                    </div>
+                    <div class="order-details">
+                        <strong>Total por cobrar: $${clientData.totalPending.toFixed(2)}</strong>
+                    </div>
+                    <div class="payment-controls">
+                        <button class="btn btn-success btn-small mark-paid-btn" data-client="${clientName}">
+                            Marcar como Pagado
+                        </button>
+                    </div>
+                `;
+                
+                const markPaidBtn = card.querySelector('.mark-paid-btn');
+                markPaidBtn.addEventListener('click', (e) => {
+                    const clientName = e.target.getAttribute('data-client');
+                    markClientAsPaid(clientName);
+                });
+                
+                pendingPaymentList.appendChild(card);
+            });
+            
+            dailyPendingTotal.textContent = `Total por Cobrar Hoy: $${totalPendingAmount.toFixed(2)}`;
+        }
+
+        // Marcar todos los pedidos de un cliente como pagados
+        function markClientAsPaid(clientName) {
+            const clientOrders = orders.filter(order => 
+                order.status === 'Pendiente de Pago' && 
+                order.date === new Date().toLocaleDateString('es-ES') &&
+                order.clientName === clientName
+            );
+            
+            if (clientOrders.length === 0) {
+                showNotification('No hay pedidos pendientes de pago para este cliente', 'error');
+                return;
+            }
+            
+            clientOrders.forEach(order => {
+                const orderIndex = orders.findIndex(o => o.id === order.id);
+                if (orderIndex !== -1) {
+                    orders[orderIndex].paidAmount = orders[orderIndex].total;
+                    orders[orderIndex].status = 'Pagado';
+                }
+            });
+            
+            saveOrders();
+            
+            // Actualizar lista de clientes disponibles
+            updateClientsList();
+            
+            // Actualizar pantallas
+            renderPendingPaymentOrders();
+            renderDeliveredOrders();
+            updateHistory();
+            
+            showNotification(`Todos los pedidos de ${clientName} marcados como pagados`, 'success');
+        }
+
+        // Renderizar pedidos entregados
+        function renderDeliveredOrders() {
+            const today = new Date().toLocaleDateString('es-ES');
+            const deliveredOrders = orders.filter(order => 
+                order.status === 'Pagado' && order.date === today
+            );
+            
+            if (deliveredOrders.length === 0) {
+                deliveredList.style.display = 'none';
+                emptyDelivered.style.display = 'block';
+                dailyDeliveredTotal.textContent = 'Total Cobrado Hoy: $0.00';
+                return;
+            }
+            
+            deliveredList.style.display = 'block';
+            emptyDelivered.style.display = 'none';
+            
+            let totalDeliveredAmount = 0;
+            deliveredList.innerHTML = '';
+            
+            deliveredOrders.forEach(order => {
+                totalDeliveredAmount += order.total;
+                
+                const card = document.createElement('div');
+                card.className = 'order-card paid';
+                
+                const productsText = [];
+                if (order.products.pan > 0) productsText.push(`🍞 Pan: ${order.products.pan}`);
+                if (order.products.empanada > 0) productsText.push(`🥟 Emp. $0.25: ${order.products.empanada}`);
+                if (order.products.empanada15 > 0) productsText.push(`🥟 Emp. $0.15: ${order.products.empanada15}`);
+                
+                card.innerHTML = `
+                    <div class="order-header">
+                        <div class="order-client">${order.clientName}</div>
+                        <div class="order-amount">$${order.total.toFixed(2)}</div>
+                    </div>
+                    <div class="order-details">
+                        ${productsText.join(' | ')}
+                    </div>
+                    <div class="order-details">
+                        <strong>Pagado: $${order.paidAmount.toFixed(2)}</strong>
+                    </div>
+                `;
+                
+                deliveredList.appendChild(card);
+            });
+            
+            dailyDeliveredTotal.textContent = `Total Cobrado Hoy: $${totalDeliveredAmount.toFixed(2)}`;
+        }
+
+        // Renderizar lista de entrega
+        function renderDeliveryList() {
+            if (deliveryOrder.length === 0) {
+                deliveryList.style.display = 'none';
+                emptyDelivery.style.display = 'block';
+                return;
+            }
+            
+            deliveryList.style.display = 'block';
+            emptyDelivery.style.display = 'none';
+            
+            deliveryList.innerHTML = '';
+            deliveryOrder.forEach((client, index) => {
+                const today = new Date().toLocaleDateString('es-ES');
+                const clientOrders = orders.filter(order => 
+                    order.clientName === client && order.date === today
+                );
+                
+                let status = 'Disponible';
+                let statusClass = 'status-delivered';
+                
+                if (clientOrders.some(order => order.status === 'Pendiente')) {
+                    status = 'Pendiente';
+                    statusClass = 'status-pending';
+                } else if (clientOrders.some(order => order.status === 'Pendiente de Pago')) {
+                    status = 'Por Cobrar';
+                    statusClass = 'status-pending-payment';
+                }
+                
+                const clientItem = document.createElement('div');
+                clientItem.className = 'delivery-item';
+                clientItem.setAttribute('data-index', index);
+                clientItem.setAttribute('draggable', 'true');
+                
+                clientItem.innerHTML = `
+                    <div class="delivery-info">
+                        <span class="drag-handle">☰</span>
+                        <span class="client-name">${client}</span>
+                        <span class="client-status ${statusClass}">${status}</span>
+                        <button class="btn btn-danger btn-small remove-client-btn" data-index="${index}">Eliminar</button>
+                    </div>
+                `;
+                
+                const removeBtn = clientItem.querySelector('.remove-client-btn');
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(e.target.getAttribute('data-index'));
+                    removeClientFromDelivery(index);
+                });
+                
+                clientItem.addEventListener('dragstart', handleDragStart);
+                clientItem.addEventListener('dragover', handleDragOver);
+                clientItem.addEventListener('drop', handleDrop);
+                clientItem.addEventListener('dragend', handleDragEnd);
+                
+                deliveryList.appendChild(clientItem);
+            });
+        }
+
+        let draggedItem = null;
+
+        function handleDragStart(e) {
+            draggedItem = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', this.getAttribute('data-index'));
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            if (draggedItem !== this) {
+                const fromIndex = parseInt(draggedItem.getAttribute('data-index'));
+                const toIndex = parseInt(this.getAttribute('data-index'));
+                const [movedItem] = deliveryOrder.splice(fromIndex, 1);
+                deliveryOrder.splice(toIndex, 0, movedItem);
+                saveDeliveryOrder();
+                renderDeliveryList();
+            }
+        }
+
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+            draggedItem = null;
+        }
+
+        function removeClientFromDelivery(index) {
+            if (confirm('¿Estás seguro de que quieres eliminar este cliente de la lista de entrega?')) {
+                deliveryOrder.splice(index, 1);
+                saveDeliveryOrder();
+                renderDeliveryList();
+                updateClientsList();
+                showNotification('Cliente eliminado de la lista de entrega', 'success');
+            }
+        }
+
+        function saveDeliveryOrder() {
+            localStorage.setItem('panaderiaDeliveryOrder', JSON.stringify(deliveryOrder));
+            showNotification('Orden de entrega guardada', 'success');
+        }
+
+        function confirmAddClient() {
+            const clientName = newClientName.value.trim();
+            
+            if (!clientName) {
+                showNotification('Por favor ingresa un nombre de cliente', 'error');
+                return;
+            }
+            
+            if (deliveryOrder.includes(clientName)) {
+                showNotification('Este cliente ya existe en la lista', 'error');
+                return;
+            }
+            
+            deliveryOrder.push(clientName);
+            saveDeliveryOrder();
+            updateClientsList();
+            renderDeliveryList();
+            addClientModal.classList.remove('active');
+            showNotification('Cliente agregado correctamente', 'success');
+        }
+
+        function updateHistory() {
+            const startDate = new Date(startDateInput.value);
+            const endDate = new Date(endDateInput.value);
+            endDate.setHours(23, 59, 59, 999);
+            
+            const filteredOrders = orders.filter(order => {
+                const orderDate = new Date(order.timestamp);
+                return orderDate >= startDate && orderDate <= endDate;
+            });
+            
+            let totalPaidAmount = 0;
+            let totalPendingAmount = 0;
+            const clientSummary = {};
+            
+            filteredOrders.forEach(order => {
+                if (order.status === 'Pagado') {
+                    totalPaidAmount += order.total;
+                } else if (order.status === 'Pendiente de Pago') {
+                    totalPendingAmount += order.total - order.paidAmount;
+                }
+                
+                if (!clientSummary[order.clientName]) {
+                    clientSummary[order.clientName] = {
+                        total: 0,
+                        paid: 0,
+                        pending: 0
+                    };
+                }
+                
+                clientSummary[order.clientName].total += order.total;
+                
+                if (order.status === 'Pagado') {
+                    clientSummary[order.clientName].paid += order.total;
+                } else if (order.status === 'Pendiente de Pago') {
+                    clientSummary[order.clientName].pending += order.total - order.paidAmount;
+                }
+            });
+            
+            totalPaid.textContent = `$${totalPaidAmount.toFixed(2)}`;
+            totalPending.textContent = `$${totalPendingAmount.toFixed(2)}`;
+            totalGeneral.textContent = `$${(totalPaidAmount + totalPendingAmount).toFixed(2)}`;
+            
+            clientsSummary.innerHTML = '';
+            
+            if (Object.keys(clientSummary).length === 0) {
+                emptySummary.style.display = 'block';
+                return;
+            }
+            
+            emptySummary.style.display = 'none';
+            
+            Object.keys(clientSummary).forEach(clientName => {
+                const summary = clientSummary[clientName];
+                const clientCard = document.createElement('div');
+                clientCard.className = 'client-summary';
+                
+                clientCard.innerHTML = `
+                    <div class="client-name">${clientName}</div>
+                    <div class="client-total">
+                        Total: $${summary.total.toFixed(2)} | 
+                        Pagado: $${summary.paid.toFixed(2)} | 
+                        Pendiente: $${summary.pending.toFixed(2)}
+                    </div>
+                `;
+                
+                clientsSummary.appendChild(clientCard);
+            });
+        }
+
+        function resetFilters() {
+            startDateInput.value = today;
+            endDateInput.value = today;
+            updateHistory();
+        }
+
+        function showNotification(message, type) {
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function saveOrders() {
+            localStorage.setItem('panaderiaOrders', JSON.stringify(orders));
+        }
+
+        function saveDailyProduction() {
+            localStorage.setItem('panaderiaDailyProduction', JSON.stringify(dailyProduction));
+        }
+
+        function saveDeliveryOrder() {
+            localStorage.setItem('panaderiaDeliveryOrder', JSON.stringify(deliveryOrder));
+            localStorage.setItem('panaderiaClients', JSON.stringify(deliveryOrder));
+        }
+
+        function exportToExcel(data, filename) {
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Datos");
+            XLSX.writeFile(wb, `${filename}.xlsx`);
+            showNotification('Datos exportados correctamente', 'success');
+        }
+
+        function exportAllData() {
+            const exportData = orders.map(order => ({
+                ID: order.id,
+                Cliente: order.clientName,
+                Fecha: order.date,
+                Pan: order.products.pan,
+                'Empanadas $0.25': order.products.empanada,
+                'Empanadas $0.15': order.products.empanada15,
+                Total: order.total,
+                Estado: order.status,
+                'Monto Pagado': order.paidAmount,
+                'Saldo Pendiente': order.total - order.paidAmount
+            }));
+            
+            exportToExcel(exportData, 'panaderia_todos_los_datos');
+        }
+
+        function exportHistoryData() {
+            const startDate = new Date(startDateInput.value);
+            const endDate = new Date(endDateInput.value);
+            endDate.setHours(23, 59, 59, 999);
+            
+            const filteredOrders = orders.filter(order => {
+                const orderDate = new Date(order.timestamp);
+                return orderDate >= startDate && orderDate <= endDate;
+            });
+            
+            const exportData = filteredOrders.map(order => ({
+                ID: order.id,
+                Cliente: order.clientName,
+                Fecha: order.date,
+                Pan: order.products.pan,
+                'Empanadas $0.25': order.products.empanada,
+                'Empanadas $0.15': order.products.empanada15,
+                Total: order.total,
+                Estado: order.status,
+                'Monto Pagado': order.paidAmount,
+                'Saldo Pendiente': order.total - order.paidAmount
+            }));
+            
+            const dateRange = `${startDateInput.value}_a_${endDateInput.value}`;
+            exportToExcel(exportData, `panaderia_historial_${dateRange}`);
+        }
+
+        function exportSummaryData() {
+            const startDate = new Date(startDateInput.value);
+            const endDate = new Date(endDateInput.value);
+            endDate.setHours(23, 59, 59, 999);
+            
+            const filteredOrders = orders.filter(order => {
+                const orderDate = new Date(order.timestamp);
+                return orderDate >= startDate && orderDate <= endDate;
+            });
+            
+            const clientSummary = {};
+            
+            filteredOrders.forEach(order => {
+                if (!clientSummary[order.clientName]) {
+                    clientSummary[order.clientName] = {
+                        total: 0,
+                        paid: 0,
+                        pending: 0
+                    };
+                }
+                
+                clientSummary[order.clientName].total += order.total;
+                
+                if (order.status === 'Pagado') {
+                    clientSummary[order.clientName].paid += order.total;
+                } else if (order.status === 'Pendiente de Pago') {
+                    clientSummary[order.clientName].pending += order.total - order.paidAmount;
+                }
+            });
+            
+            const exportData = Object.keys(clientSummary).map(clientName => {
+                const summary = clientSummary[clientName];
+                return {
+                    Cliente: clientName,
+                    Total: summary.total,
+                    Pagado: summary.paid,
+                    Pendiente: summary.pending
+                };
+            });
+            
+            const dateRange = `${startDateInput.value}_a_${endDateInput.value}`;
+            exportToExcel(exportData, `panaderia_resumen_${dateRange}`);
+        }
+
+        function backupData() {
+            const backup = {
+                clients: deliveryOrder,
+                orders: orders,
+                deliveryOrder: deliveryOrder,
+                dailyProduction: dailyProduction,
+                backupDate: new Date().toISOString()
+            };
+            
+            const dataStr = JSON.stringify(backup, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `panaderia_backup_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            showNotification('Respaldo creado correctamente', 'success');
+        }
+
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
